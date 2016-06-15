@@ -7,11 +7,12 @@
 set -e
 
 # Bring in the backup configuration
-cd $(dirname "$0")/../..
-. share/github-backup-utils/ghe-backup-config
+. $( dirname "${BASH_SOURCE[0]}" )/ghe-backup-config
 
 # Show usage and bail with no arguments
 [ -z "$*" ] && print_usage
+
+bm_start "$(basename $0)"
 
 # Grab host arg
 GHE_HOSTNAME="$1"
@@ -85,6 +86,11 @@ for pages_path in $pages_paths; do
   echo "$page_id" >&4
   read routes < ssh_routes_in
 
+  if [ "$routes" = 'page-id-not-found' ]; then
+    echo "  Warning: page ID $page_id not found in the database, ignoring."
+    continue
+  fi
+
   for route in $routes; do
     ghe-rsync -aHR --delete \
       -e "ssh -q $opts -p $port -F $config_file -l $user" \
@@ -118,3 +124,5 @@ cat ssh_finalize_in > /dev/null &
 
 wait $ssh_routes_pid > /dev/null 2>&1 || true
 wait $ssh_finalize_pid > /dev/null 2>&1 || true
+
+bm_end "$(basename $0)"

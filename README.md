@@ -45,10 +45,11 @@ storage and must have network connectivity with the GitHub Enterprise appliance.
 ##### Backup host requirements
 
 Backup host software requirements are modest: Linux or other modern Unix
-operating system with [rsync][4] v2.6.4 or newer.
+operating system with bash and [rsync][4] v2.6.4 or newer.
 
 The backup host must be able to establish network connections outbound to the
-GitHub appliance over SSH. TCP port 122 is used to backup GitHub Enterprise 2.0 or newer instances, and TCP port 22 is used for older versions (11.10.34X).
+GitHub appliance over SSH. TCP port 122 is used to backup GitHub Enterprise 2.0
+or newer instances, and TCP port 22 is used for older versions (11.10.34X).
 
 ##### Storage requirements
 
@@ -56,6 +57,9 @@ Storage requirements vary based on current Git repository disk usage and growth
 patterns of the GitHub appliance. We recommend allocating at least 5x the amount
 of storage allocated to the primary GitHub appliance for historical snapshots
 and growth over time.
+
+The backup utilities use [hard links][12] to store data efficiently, so the backup
+snapshots must be written to a filesystem with support for hard links.
 
 ##### GitHub Enterprise version requirements
 
@@ -83,6 +87,16 @@ download the most recent GitHub Enterprise version.
     host name. Additional options are available and documented in the
     configuration file but none are required for basic backup functionality.
 
+    * backup-utils will attempt to load the backup configuration from the following locations, in this order:
+
+      ```
+      $GHE_BACKUP_CONFIG (User configurable environment variable)
+      $GHE_BACKUP_ROOT/backup.config (Root directory of backup-utils install)
+      $HOME/.github-backup-utils/backup.config
+      /etc/github-backup-utils/backup.config
+      ```
+    * In a clustering environment, the `GHE_EXTRA_SSH_OPTS` key must be configured with the `-i <abs path to private key>` SSH option.
+
  3. Add the backup host's SSH key to the GitHub appliance as an *Authorized SSH
     key*. See [Adding an SSH key for shell access][3] for instructions.
 
@@ -109,7 +123,8 @@ After the initial backup, use the following commands:
  - The `ghe-backup` command creates incremental snapshots of repository data,
    along with full snapshots of all other pertinent data stores.
  - The `ghe-restore` command restores snapshots to the same or separate GitHub
-   Enterprise appliance.
+   Enterprise appliance. You must add the backup host's SSH key to the target
+   GitHub Enterprise appliance before using this command.
 
 ##### Example backup and restore usage
 
@@ -207,6 +222,11 @@ date and time the snapshot was taken. Each snapshot directory contains a full
 backup snapshot of all relevant data stores. Repository, Search, and Pages data
 is stored efficiently via hard links.
 
+*Please note* Symlinks must be maintained when archiving backup snapshots.
+Dereferencing or excluding symlinks, or storing the snapshot contents on a
+filesystem which does not support symlinks will result in operational
+problems when the data is restored.
+
 The following example shows a snapshot file hierarchy for hourly frequency.
 There are five snapshot directories, with the `current` symlink pointing to the
 most recent successful snapshot:
@@ -261,3 +281,4 @@ site setup or recovery, please contact our [Enterprise support team][7] instead.
 [9]: https://enterprise.github.com/help/articles/restoring-enterprise-data
 [10]: https://help.github.com/enterprise/2.0/admin-guide/migrating-to-a-different-platform-or-from-github-enterprise-11-10-34x/
 [11]: https://help.github.com/enterprise/2.0/admin-guide/
+[12]: https://en.wikipedia.org/wiki/Hard_link

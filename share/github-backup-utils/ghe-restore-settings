@@ -1,14 +1,15 @@
-#!/bin/sh
+#!/usr/bin/env bash
 #/ Usage: ghe-restore-settings <host>
 #/ Restore settings from a snapshot to the given <host>.
 set -e
 
 # Bring in the backup configuration
-cd $(dirname "$0")/../..
-. share/github-backup-utils/ghe-backup-config
+. $( dirname "${BASH_SOURCE[0]}" )/ghe-backup-config
 
 # Show usage and bail with no arguments
 [ -z "$*" ] && print_usage
+
+bm_start "$(basename $0)"
 
 # Grab host arg
 GHE_HOSTNAME="$1"
@@ -62,3 +63,5 @@ if [ -f "$GHE_RESTORE_SNAPSHOT_PATH/saml-keys.tar" ]; then
     cat "$GHE_RESTORE_SNAPSHOT_PATH/saml-keys.tar" |
     ghe-ssh "$GHE_HOSTNAME" -- "sudo tar -C $GHE_REMOTE_DATA_USER_DIR/common/ -xf -"
 fi
+
+bm_start "$(basename $0)"

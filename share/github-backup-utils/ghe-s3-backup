@@ -17,9 +17,16 @@ aws s3 mb s3://$GHE_S3_BUCKET
 # compress the data
 cd "$GHE_DATA_DIR"/current
 TAR_FILENAME=$(readlink ../current)".tar.gz"
-tar czvf $TAR_FILENAME *
+# split file to maximum 5 GB size
+tar czvf - * | split -b 5G -d - $TAR_FILENAME"."
+
+# check how many compressed files need to upload
+TAR_FILES=($(ls $TAR_FILENAME*))
 
 # Upload to S3.
 S3_SSE_C_KEY=$(cat "$S3_AES256_KEY_FILE")
 
-aws s3api put-object --sse-customer-algorithm AES256 --sse-customer-key $S3_SSE_C_KEY --bucket $GHE_S3_BUCKET --key $TAR_FILENAME --body $TAR_FILENAME 
+for file in ${TAR_FILES[@]}; do
+  echo "upload file: $file"
+  aws s3api put-object --sse-customer-algorithm AES256 --sse-customer-key $S3_SSE_C_KEY --bucket $GHE_S3_BUCKET --key $file --body $file
+done

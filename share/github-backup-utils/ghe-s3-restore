@@ -12,6 +12,10 @@ mkdir -p "$GHE_SNAPSHOT_DIR"
 
 LATEST_TARBALL=$(aws s3 ls s3://$GHE_S3_BUCKET/ | tail -1 | awk '{print $4}')
 S3_SSE_C_KEY=$(cat "$S3_AES256_KEY_FILE")
+
+
+#check LATEST_TARBALL to define if there are multiple tarball partitions
+
 aws s3api get-object --sse-customer-algorithm AES256 --sse-customer-key $S3_SSE_C_KEY --bucket $GHE_S3_BUCKET --key $LATEST_TARBALL $GHE_SNAPSHOT_DIR/$LATEST_TARBALL
 
 #decompress the file

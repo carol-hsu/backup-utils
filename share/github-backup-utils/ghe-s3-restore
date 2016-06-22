@@ -13,13 +13,25 @@ mkdir -p "$GHE_SNAPSHOT_DIR"
 LATEST_TARBALL=$(aws s3 ls s3://$GHE_S3_BUCKET/ | tail -1 | awk '{print $4}')
 S3_SSE_C_KEY=$(cat "$S3_AES256_KEY_FILE")
 
-
 #check LATEST_TARBALL to define if there are multiple tarball partitions
+if [ "${LATEST_TARBALL##*.}" == "gz" ]; then
+#only one tarball file
+    aws s3api get-object --sse-customer-algorithm AES256 --sse-customer-key $S3_SSE_C_KEY --bucket $GHE_S3_BUCKET --key $LATEST_TARBALL $GHE_SNAPSHOT_DIR/$LATEST_TARBALL
+else
+#more than one tarball file
+   TAR_FILES=($(aws s3 ls s3://$GHE_S3_BUCKET/${LATEST_TARBALL%.*} | awk '{print $4}'))
+   for file in ${TAR_FILES[@]}; do
+     echo "download file: $file"
+     aws s3api get-object --sse-customer-algorithm AES256 --sse-customer-key $S3_SSE_C_KEY --bucket $GHE_S3_BUCKET --key $file $GHE_SNAPSHOT_DIR/$file
+   done
+fi
 
-aws s3api get-object --sse-customer-algorithm AES256 --sse-customer-key $S3_SSE_C_KEY --bucket $GHE_S3_BUCKET --key $LATEST_TARBALL $GHE_SNAPSHOT_DIR/$LATEST_TARBALL
+cat $GHE_SNAPSHOT_DIR/*.tar.gz* | tar -xvf - -C $GHE_SNAPSHOT_DIR
+
+#aws s3api get-object --sse-customer-algorithm AES256 --sse-customer-key $S3_SSE_C_KEY --bucket $GHE_S3_BUCKET --key $LATEST_TARBALL $GHE_SNAPSHOT_DIR/$LATEST_TARBALL
 
 #decompress the file
-tar xvf $GHE_SNAPSHOT_DIR/$LATEST_TARBALL -C $GHE_SNAPSHOT_DIR
+#tar xvf $GHE_SNAPSHOT_DIR/$LATEST_TARBALL -C $GHE_SNAPSHOT_DIR
 
 # Run the restore script.
-ghe-restore -s "$GHE_SNAPSHOT_DIR"
+#ghe-restore -s "$GHE_SNAPSHOT_DIR"

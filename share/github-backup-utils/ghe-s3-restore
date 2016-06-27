@@ -27,11 +27,7 @@ else
 fi
 
 cat $GHE_SNAPSHOT_DIR/*.tar.gz* | tar zxf - -C $GHE_SNAPSHOT_DIR
-
-#aws s3api get-object --sse-customer-algorithm AES256 --sse-customer-key $S3_SSE_C_KEY --bucket $GHE_S3_BUCKET --key $LATEST_TARBALL $GHE_SNAPSHOT_DIR/$LATEST_TARBALL
-
-#decompress the file
-#tar xvf $GHE_SNAPSHOT_DIR/$LATEST_TARBALL -C $GHE_SNAPSHOT_DIR
+rm -f $GHE_SNAPSHOT_DIR/*.tar.gz*
 
 # Run the restore script.
 ghe-restore -s "$GHE_SNAPSHOT_DIR"
